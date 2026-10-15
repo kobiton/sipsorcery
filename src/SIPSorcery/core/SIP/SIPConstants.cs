@@ -622,19 +622,19 @@ namespace SIPSorcery.SIP
                     var trimmedExtension = extension.Trim();
                     switch (trimmedExtension)
                     {
-                        case var x when PRACK.Equals(x, StringComparison.OrdinalIgnoreCase):
+                        case var x when PRACK.AsSpan().Equals(x, StringComparison.OrdinalIgnoreCase):
                             knownExtensions.Add(SIPExtensions.Prack);
                             break;
-                        case var x when NO_REFER_SUB.Equals(x, StringComparison.OrdinalIgnoreCase):
+                        case var x when NO_REFER_SUB.AsSpan().Equals(x, StringComparison.OrdinalIgnoreCase):
                             knownExtensions.Add(SIPExtensions.NoReferSub);
                             break;
-                        case var x when REPLACES.Equals(x, StringComparison.OrdinalIgnoreCase):
+                        case var x when REPLACES.AsSpan().Equals(x, StringComparison.OrdinalIgnoreCase):
                             knownExtensions.Add(SIPExtensions.Replaces);
                             break;
-                        case var x when SIPREC.Equals(x, StringComparison.OrdinalIgnoreCase):
+                        case var x when SIPREC.AsSpan().Equals(x, StringComparison.OrdinalIgnoreCase):
                             knownExtensions.Add(SIPExtensions.SipRec);
                             break;
-                        case var x when MULTIPLE_REFER.Equals(x, StringComparison.OrdinalIgnoreCase):
+                        case var x when MULTIPLE_REFER.AsSpan().Equals(x, StringComparison.OrdinalIgnoreCase):
                             knownExtensions.Add(SIPExtensions.MultipleRefer);
                             break;
                         default:

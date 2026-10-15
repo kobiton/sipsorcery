@@ -12,4 +12,16 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
 
+  <!-- The .NET 8 SDK refuses to evaluate a project that lists net9.0 or net10.0, and its compiler knows the C# 13
+       features Polyfill needs only as previews. Imported after each .csproj, so it overrides what they set. -->
+  <PropertyGroup Condition="$([MSBuild]::VersionLessThan('$(NETCoreSdkVersion)', '10.0'))">
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFrameworks)' != '' and $([MSBuild]::VersionLessThan('$(NETCoreSdkVersion)', '10.0'))">
+    <TargetFrameworks>$([MSBuild]::Unescape($(TargetFrameworks.Replace(';net10.0', ''))))</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFrameworks)' != '' and $([MSBuild]::VersionLessThan('$(NETCoreSdkVersion)', '9.0'))">
+    <TargetFrameworks>$([MSBuild]::Unescape($(TargetFrameworks.Replace(';net9.0', ''))))</TargetFrameworks>
+  </PropertyGroup>
+
 </Project>

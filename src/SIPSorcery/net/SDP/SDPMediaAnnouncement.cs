@@ -242,12 +242,14 @@ namespace SIPSorcery.Net
             MessageMediaFormat = messageMediaFormat;
         }
 
+        private static readonly System.Buffers.SearchValues<char> FormatSeparators = System.Buffers.SearchValues.Create(" \t\r\n");
+
         public void ParseMediaFormats(string formatList)
         {
             if (!String.IsNullOrWhiteSpace(formatList))
             {
                 var formatListSpan = formatList.AsSpan();
-                foreach (var formatIDRange in formatListSpan.SplitAny())
+                foreach (var formatIDRange in formatListSpan.SplitAny(FormatSeparators))
                 {
                     var formatIDSpan = formatListSpan[formatIDRange];
 

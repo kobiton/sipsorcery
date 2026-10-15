@@ -474,7 +474,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                 case SrtpCiphers.SEED_128_CCM:
                 case SrtpCiphers.SEED_128_GCM:
                     {
-                        engineKeys.Init(true, KeyParameter.Create(masterKey));
+                        engineKeys.Init(true, BouncyCastleExtensions.CreateKeyParameter(masterKey));
                         Encryption.CTR.GenerateSessionKeyIV(masterSalt, index, kdr, (byte)label, iv);
                         Encryption.CTR.Encrypt(engineKeys, key, key, iv);
                     }
@@ -487,7 +487,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                         var innerKey = masterKey.Slice(0, masterKey.Length / 2);
 
                         Encryption.CTR.GenerateSessionKeyIV(innerSalt, index, kdr, (byte)label, iv);
-                        engineKeys.Init(true, KeyParameter.Create(innerKey));
+                        engineKeys.Init(true, BouncyCastleExtensions.CreateKeyParameter(innerKey));
                         var halfLen = key.Length / 2;
                         Encryption.CTR.Encrypt(engineKeys, key.AsSpan(0, halfLen), key.AsSpan(0, halfLen), iv);
 
@@ -495,7 +495,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                         var outerKey = masterKey.Slice(masterKey.Length / 2);
 
                         Encryption.CTR.GenerateSessionKeyIV(outerSalt, index, kdr, (byte)label, iv);
-                        engineKeys.Init(true, KeyParameter.Create(outerKey));
+                        engineKeys.Init(true, BouncyCastleExtensions.CreateKeyParameter(outerKey));
                         Encryption.CTR.Encrypt(engineKeys, key.AsSpan(halfLen), key.AsSpan(halfLen), iv);
                     }
                     break;
@@ -638,7 +638,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                             input.Slice(offset, length - offset).CopyTo(syntheticRtpPacket.AsSpan(rtpHeaderLength, length - offset));
 
                             // apply inner cryptographic algorithm
-                            var innerK_e = KeyParameter.Create(context.K_e.Slice(0, context.K_e.Length / 2));
+                            var innerK_e = BouncyCastleExtensions.CreateKeyParameter(context.K_e.Slice(0, context.K_e.Length / 2));
                             var innerK_s = context.K_s.AsSpan(0, context.K_s.Length / 2);
                             SRTP.Encryption.AEAD.GenerateMessageKeyIV(innerK_s, ssrc, index, context.Iv12);
                             SRTP.Encryption.AEAD.Encrypt(context.PayloadAEAD, true, syntheticRtpPacket.Slice(rtpHeaderLength, length - rtpExtensionsLength - rtpHeaderLength), syntheticRtpPacket.Slice(rtpHeaderLength, syntheticRtpPacketLen - rtpHeaderLength), context.Iv12, innerK_e, context.N_tag / 2, syntheticRtpPacket.Slice(0, rtpHeaderLength));
@@ -653,7 +653,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                             length += 1;
 
                             // apply outer cryptographic algorithm
-                            var outerK_e = KeyParameter.Create(context.K_e.Slice(context.K_e.Length / 2));
+                            var outerK_e = BouncyCastleExtensions.CreateKeyParameter(context.K_e.Slice(context.K_e.Length / 2));
                             var outerK_s = context.K_s.AsSpan(context.K_s.Length / 2);
                             SRTP.Encryption.AEAD.GenerateMessageKeyIV(outerK_s, ssrc, index, context.Iv12);
 
@@ -914,7 +914,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                     case SrtpCiphers.DOUBLE_AEAD_AES_256_GCM_AEAD_AES_256_GCM:
                         {
                             // apply outer cryptographic algorithm
-                            var outerK_e = KeyParameter.Create(context.K_e.Slice(context.K_e.Length / 2));
+                            var outerK_e = BouncyCastleExtensions.CreateKeyParameter(context.K_e.Slice(context.K_e.Length / 2));
                             var outerK_s = context.K_s.AsSpan(context.K_s.Length / 2);
                             SRTP.Encryption.AEAD.GenerateMessageKeyIV(outerK_s, ssrc, index, context.Iv12);
                             SRTP.Encryption.AEAD.Encrypt(context.PayloadAEAD, false, input.Slice(offset, length - mki.Length - offset), output.Slice(offset), context.Iv12, outerK_e, context.N_tag / 2, input.Slice(0, offset));
@@ -974,7 +974,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                                 var innerIndex = SrtpContext.DetermineRtpIndex(lastSeq, innerSequenceNumber, lastRoc);
 
                                 // apply inner cryptographic algorithm
-                                var innerK_e = KeyParameter.Create(context.K_e.Slice(0, context.K_e.Length / 2));
+                                var innerK_e = BouncyCastleExtensions.CreateKeyParameter(context.K_e.Slice(0, context.K_e.Length / 2));
                                 var innerK_s = context.K_s.AsSpan(0, context.K_s.Length / 2);
                                 SRTP.Encryption.AEAD.GenerateMessageKeyIV(innerK_s, innerSsrc, innerIndex, context.Iv12);
                                 SRTP.Encryption.AEAD.Encrypt(context.PayloadAEAD, false, syntheticRtpPacket.Slice(rtpHeaderLength, syntheticRtpPacketLen - rtpHeaderLength), syntheticRtpPacket.Slice(rtpHeaderLength, syntheticRtpPacketLen - rtpHeaderLength), context.Iv12, innerK_e, context.N_tag / 2, syntheticRtpPacket.Slice(0, rtpHeaderLength));
@@ -1136,7 +1136,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                 case SrtpCiphers.DOUBLE_AEAD_AES_256_GCM_AEAD_AES_256_GCM:
                     {
                         // RTCP under Double AEAD is protected only with the outer layer
-                        var outerK_e = KeyParameter.Create(context.K_e.Slice(context.K_e.Length / 2));
+                        var outerK_e = BouncyCastleExtensions.CreateKeyParameter(context.K_e.Slice(context.K_e.Length / 2));
                         var outerK_s = context.K_s.AsSpan(context.K_s.Length / 2);
                         SRTP.Encryption.AEAD.GenerateMessageKeyIV(outerK_s, ssrc, ssrcContext.S_l, context.Iv12);
                         var associatedDataRented = ArrayPool<byte>.Shared.Rent(offset + 4);
@@ -1321,7 +1321,7 @@ namespace SIPSorcery.Net.SharpSRTP.SRTP
                         case SrtpCiphers.DOUBLE_AEAD_AES_256_GCM_AEAD_AES_256_GCM:
                             {
                                 // RTCP under Double AEAD is protected only with the outer layer
-                                var outerK_e = KeyParameter.Create(context.K_e.Slice(context.K_e.Length / 2));
+                                var outerK_e = BouncyCastleExtensions.CreateKeyParameter(context.K_e.Slice(context.K_e.Length / 2));
                                 var outerK_s = context.K_s.AsSpan(context.K_s.Length / 2);
                                 SRTP.Encryption.AEAD.GenerateMessageKeyIV(outerK_s, ssrc, index, context.Iv12);
                                 var associatedDataRented = ArrayPool<byte>.Shared.Rent(offset + 4);

@@ -128,5 +128,49 @@ namespace SIPSorcery.Net.UnitTests
             Assert.NotNull(cp);
         }
 
+
+        /// <summary>
+        /// Chrome puts every lost range in one generic NACK and follows it with a REMB. Each range must be read, and the
+        /// REMB after it found rather than parsed out of the NACK's second range.
+        /// </summary>
+        [Fact]
+        public void ParseNackWithManyFieldsFollowedByRembUnitTest()
+        {
+            logger.LogDebug("--> {MethodName}", TestHelper.GetCurrentMethodName());
+            logger.BeginScope(TestHelper.GetCurrentMethodName());
+
+            var rr = new RTCPReceiverReport(1, new List<ReceptionReportSample> { new ReceptionReportSample(2, 0, 0, 0, 0, 0, 0) });
+            var nack = new RTCPFeedback(1, 2, RTCPFeedbackTypesEnum.NACK, 0x1cf8, 0xffff);
+            nack.NackFields.Add(new RTCPNackField(0x1d09, 0xffff));
+            nack.NackFields.Add(new RTCPNackField(0x1d1a, 0x0003));
+            nack.SENDER_PAYLOAD_SIZE = 8 + nack.NackFields.Count * 4;
+
+            var remb = new RTCPFeedback(1, 0, PSFBFeedbackTypesEnum.AFB)
+            {
+                UniqueID = "REMB",
+                NumSsrcs = 1,
+                BitrateExp = 2,
+                BitrateMantissa = 100000,
+                FeedbackSSRCs = new uint[] { 2 },
+                SENDER_PAYLOAD_SIZE = 8 + 12
+            };
+
+            var buffer = rr.GetBytes().Concat(nack.GetBytes()).Concat(remb.GetBytes()).ToArray();
+
+            var compound = new RTCPCompoundPacket(buffer);
+
+            Assert.NotNull(compound.ReceiverReport);
+            Assert.Equal(2, compound.Feedbacks.Count);
+
+            var parsed = compound.Feedbacks[0];
+            Assert.Equal(RTCPFeedbackTypesEnum.NACK, parsed.Header.FeedbackMessageType);
+            Assert.Equal(new ushort[] { 0x1cf8, 0x1d09, 0x1d1a }, parsed.NackFields.Select(f => f.PID).ToArray());
+            Assert.Equal(new ushort[] { 0xffff, 0xffff, 0x0003 }, parsed.NackFields.Select(f => f.BLP).ToArray());
+            Assert.Equal(0x1cf8, parsed.PID);
+
+            Assert.Equal("REMB", compound.Feedbacks[1].UniqueID);
+            Assert.Same(compound.Feedbacks[1], compound.Feedback);
+            Assert.Equal(nack.GetBytes(), parsed.GetBytes());
+        }
     }
 }

@@ -38,6 +38,11 @@ namespace SIPSorcery.Net
         public RTCPSDesReport SDesReport { get; private set; }
         public RTCPBye Bye { get; set; }
         public RTCPFeedback Feedback { get; set; }
+
+        /// <summary>
+        /// Every RTPFB and PSFB packet in the compound, in order. Feedback is the last of them.
+        /// </summary>
+        public List<RTCPFeedback> Feedbacks { get; } = new List<RTCPFeedback>();
         public RTCPTWCCFeedback TWCCFeedback { get; set; }
 
         protected internal RTCPCompoundPacket()
@@ -108,16 +113,16 @@ namespace SIPSorcery.Net
                                     break;
                                 default:
                                     Feedback = new RTCPFeedback(buffer);
-                                    int rtpfbFeedbackLength = Feedback.GetBytes().Length;
-                                    offset += rtpfbFeedbackLength;
+                                    Feedbacks.Add(Feedback);
+                                    offset += (Feedback.Header.Length + 1) * 4;
                                     break;
                             }
                             break;
                         case (byte)RTCPReportTypesEnum.PSFB:
                             // TODO: Interpret Payload specific feedback reports.
                             Feedback = new RTCPFeedback(buffer);
-                            int psfbFeedbackLength = (Feedback != null) ? Feedback.GetBytes().Length : Int32.MaxValue;
-                            offset += psfbFeedbackLength;
+                            Feedbacks.Add(Feedback);
+                            offset += (Feedback.Header.Length + 1) * 4;
                             //var psfbHeader = new RTCPHeader(buffer);
                             //offset += psfbHeader.Length * 4 + 4;
                             break;
@@ -268,8 +273,8 @@ namespace SIPSorcery.Net
                                 default:
                                     {
                                         rtcpCompoundPacket.Feedback = new RTCPFeedback(buffer);
-                                        int rtpfbFeedbackLength = (rtcpCompoundPacket.Feedback != null) ? rtcpCompoundPacket.Feedback.GetBytes().Length : Int32.MaxValue;
-                                        offset += rtpfbFeedbackLength;
+                                        rtcpCompoundPacket.Feedbacks.Add(rtcpCompoundPacket.Feedback);
+                                        offset += (rtcpCompoundPacket.Feedback.Header.Length + 1) * 4;
                                     }
                                     break;
                                 case RTCPFeedbackTypesEnum.TWCC:
@@ -284,8 +289,8 @@ namespace SIPSorcery.Net
                         case (byte)RTCPReportTypesEnum.PSFB:
                             // TODO: Interpret Payload specific feedback reports.
                             rtcpCompoundPacket.Feedback = new RTCPFeedback(buffer);
-                            int psfbFeedbackLength = (rtcpCompoundPacket.Feedback != null) ? rtcpCompoundPacket.Feedback.GetBytes().Length : Int32.MaxValue;
-                            offset += psfbFeedbackLength;
+                            rtcpCompoundPacket.Feedbacks.Add(rtcpCompoundPacket.Feedback);
+                            offset += (rtcpCompoundPacket.Feedback.Header.Length + 1) * 4;
                             //var psfbHeader = new RTCPHeader(buffer);
                             //offset += psfbHeader.Length * 4 + 4;
                             break;

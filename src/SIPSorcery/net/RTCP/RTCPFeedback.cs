@@ -27,6 +27,7 @@
 //-----------------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Buffers.Binary;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.Sys;
@@ -96,6 +97,11 @@ namespace SIPSorcery.Net
         public uint MediaSSRC;
         public ushort PID; // Packet ID (PID): 16 bits to specify a lost packet, the RTP sequence number of the lost packet.
         public ushort BLP; // bitmask of following lost packets (BLP): 16 bits
+
+        /// <summary>
+        /// Every PID and BLP pair of a generic NACK, which may carry many (RFC 4585 section 6.2.1). PID and BLP are the first.
+        /// </summary>
+        public List<RTCPNackField> NackFields = new List<RTCPNackField>();
         public uint FCI; // Feedback Control Information (FCI)  
 
         // REMB Parameters
@@ -130,6 +136,7 @@ namespace SIPSorcery.Net
             MediaSSRC = mediaSsrc;
             PID = sequenceNo;
             BLP = bitMask;
+            NackFields.Add(new RTCPNackField(sequenceNo, bitMask));
         }
 
         /// <summary>
@@ -177,9 +184,21 @@ namespace SIPSorcery.Net
                     // PLI feedback reports do no have any additional parameters.
                     break;
                 case var h when h.PacketType == RTCPReportTypesEnum.RTPFB:
-                    SENDER_PAYLOAD_SIZE = 12;
-                    PID = BinaryPrimitives.ReadUInt16BigEndian(packet.AsSpan(payloadIndex + 8));
-                    BLP = BinaryPrimitives.ReadUInt16BigEndian(packet.AsSpan(payloadIndex + 10));
+                    {
+                        // The header's length counts every FCI; at least one is read, as before.
+                        var fields = Math.Max(1, Math.Min((h.Length + 1) * 4 - RTCPHeader.HEADER_BYTES_LENGTH - 8, packet.Length - payloadIndex - 8) / 4);
+
+                        for (var i = 0; i < fields; i++)
+                        {
+                            NackFields.Add(new RTCPNackField(
+                                BinaryPrimitives.ReadUInt16BigEndian(packet.AsSpan(payloadIndex + 8 + i * 4)),
+                                BinaryPrimitives.ReadUInt16BigEndian(packet.AsSpan(payloadIndex + 10 + i * 4))));
+                        }
+
+                        SENDER_PAYLOAD_SIZE = 8 + fields * 4;
+                        PID = NackFields[0].PID;
+                        BLP = NackFields[0].BLP;
+                    }
                     break;
 
                 case var h when h.PacketType == RTCPReportTypesEnum.PSFB && h.PayloadFeedbackMessageType == PSFBFeedbackTypesEnum.PLI:
@@ -271,8 +290,19 @@ namespace SIPSorcery.Net
                     // PLI feedback reports do no have any additional parameters.
                     break;
                 case var h when h.PacketType == RTCPReportTypesEnum.RTPFB:
-                    BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(payloadIndex + 8), PID);
-                    BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(payloadIndex + 10), BLP);
+                    if (NackFields.Count > 1)
+                    {
+                        for (var i = 0; i < NackFields.Count && payloadIndex + 12 + i * 4 <= buffer.Length; i++)
+                        {
+                            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(payloadIndex + 8 + i * 4), NackFields[i].PID);
+                            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(payloadIndex + 10 + i * 4), NackFields[i].BLP);
+                        }
+                    }
+                    else
+                    {
+                        BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(payloadIndex + 8), PID);
+                        BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(payloadIndex + 10), BLP);
+                    }
                     break;
 
                 case var h when h.PacketType == RTCPReportTypesEnum.PSFB && h.PayloadFeedbackMessageType == PSFBFeedbackTypesEnum.PLI:
@@ -342,6 +372,22 @@ namespace SIPSorcery.Net
             }
             return buffer;
         }
+    }
+
+    /// <summary>
+    /// One FCI of a generic NACK: a lost packet and a bitmask of the 16 after it that were lost too.
+    /// </summary>
+    public readonly struct RTCPNackField
+    {
+        public RTCPNackField(ushort pid, ushort blp)
+        {
+            PID = pid;
+            BLP = blp;
+        }
+
+        public ushort PID { get; }
+
+        public ushort BLP { get; }
     }
 }
 

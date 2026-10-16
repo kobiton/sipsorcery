@@ -23,5 +23,9 @@
   <PropertyGroup Condition="'$(TargetFrameworks)' != '' and $([MSBuild]::VersionLessThan('$(NETCoreSdkVersion)', '9.0'))">
     <TargetFrameworks>$([MSBuild]::Unescape($(TargetFrameworks.Replace(';net9.0', ''))))</TargetFrameworks>
   </PropertyGroup>
+  <!-- A .NET 8 consumer takes net8.0 alone, and the polyfills for the frameworks before it are C# 14. -->
+  <PropertyGroup Condition="$(TargetFrameworks.Contains('net8.0')) and $([MSBuild]::VersionLessThan('$(NETCoreSdkVersion)', '10.0'))">
+    <TargetFrameworks>net8.0</TargetFrameworks>
+  </PropertyGroup>
 
 </Project>

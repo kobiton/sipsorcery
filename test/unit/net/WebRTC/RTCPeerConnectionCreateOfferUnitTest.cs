@@ -19,6 +19,9 @@
 // BSD 3-Clause "New" or "Revised" License, see included LICENSE.md file.
 //-----------------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.Net.UnitTests.Helpers;
 using SIPSorceryMedia.Abstractions;
@@ -301,6 +304,28 @@ namespace SIPSorcery.Net.UnitTests
                 var offerInit = pc.createOffer(new RTCOfferOptions { X_ExcludeIceCandidates = true });
 
                 Assert.DoesNotContain("a=candidate:", offerInit.sdp);
+            }
+        }
+
+        /// <summary>
+        /// An ICE server that never answers leaves gathering incomplete, so
+        /// X_WaitForIceGatheringToComplete must give up after X_GatherTimeoutMs.
+        /// </summary>
+        [Fact]
+        public async Task OfferOptions_WaitForIceGatheringToComplete_GivesUpAfterGatherTimeout()
+        {
+            var configuration = new RTCConfiguration
+            {
+                iceServers = new List<RTCIceServer> { new RTCIceServer { urls = "stun:192.0.2.1:3478" } },
+                X_GatherTimeoutMs = 500
+            };
+
+            using (var pc = new PeerConnectionBuilder().WithConfiguration(configuration).WithAudioTrack().Build())
+            {
+                var offer = Task.Run(() => pc.createOffer(new RTCOfferOptions { X_WaitForIceGatheringToComplete = true }));
+
+                Assert.Same(offer, await Task.WhenAny(offer, Task.Delay(TimeSpan.FromSeconds(10))));
+                Assert.NotEqual(RTCIceGatheringState.complete, pc.iceGatheringState);
             }
         }
     }

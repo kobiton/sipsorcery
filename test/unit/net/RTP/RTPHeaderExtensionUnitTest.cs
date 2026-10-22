@@ -96,5 +96,43 @@ namespace SIPSorcery.UnitTests.Net
             Assert.Equal(cvo.HorizontalFlip, cvoFromBytes.HorizontalFlip);
             Assert.Equal(cvo.VideoRotation, cvoFromBytes.VideoRotation);
         }
+
+        [Fact]
+        public void RTPHeaderExtensionPlayoutDelay()
+        {
+            logger.LogDebug("--> {MethodName}", TestHelper.GetCurrentMethodName());
+            logger.BeginScope(TestHelper.GetCurrentMethodName());
+
+            var extension = new PlayoutDelayExtension(5);
+            extension.Set(new PlayoutDelayExtension.PlayoutDelay { MinMilliseconds = 1234, MaxMilliseconds = 40950 });
+
+            var bytesMarshalled = extension.Marshal();
+            Assert.Equal(new byte[] { 0x52, 0x07, 0xBF, 0xFF }, bytesMarshalled); // 123 and 4095 units of 10ms
+
+            var delay = (PlayoutDelayExtension.PlayoutDelay)extension.Unmarshal(null, bytesMarshalled[1..]);
+            Assert.Equal(1230, delay.MinMilliseconds);
+            Assert.Equal(40950, delay.MaxMilliseconds);
+        }
+
+        [Fact]
+        public void RTPHeaderExtensionPlayoutDelayDefaultsToZeroAndClampsOutOfRange()
+        {
+            logger.LogDebug("--> {MethodName}", TestHelper.GetCurrentMethodName());
+            logger.BeginScope(TestHelper.GetCurrentMethodName());
+
+            var extension = new PlayoutDelayExtension(5);
+            Assert.Equal(new byte[] { 0x52, 0x00, 0x00, 0x00 }, extension.Marshal());
+
+            extension.Set(new PlayoutDelayExtension.PlayoutDelay { MinMilliseconds = -10, MaxMilliseconds = 50000 });
+            Assert.Equal(new byte[] { 0x52, 0x00, 0x0F, 0xFF }, extension.Marshal());
+        }
+
+        [Fact]
+        public void RTPHeaderExtensionPlayoutDelayIsVideoOnly()
+        {
+            var uri = PlayoutDelayExtension.RTP_HEADER_EXTENSION_URI;
+            Assert.IsType<PlayoutDelayExtension>(RTPHeaderExtension.GetRTPHeaderExtension(5, uri, SDPMediaTypesEnum.video));
+            Assert.Null(RTPHeaderExtension.GetRTPHeaderExtension(5, uri, SDPMediaTypesEnum.audio));
+        }
     }
 }

@@ -31,6 +31,10 @@ namespace SIPSorcery.Net
                     result = new AudioLevelExtension(id);
                     break;
 
+                case PlayoutDelayExtension.RTP_HEADER_EXTENSION_URI:
+                    result = new PlayoutDelayExtension(id);
+                    break;
+
                 case TransportWideCCExtension.RTP_HEADER_EXTENSION_URI:
                 //case TransportWideCCExtension.RTP_HEADER_EXTENSION_URI_ALT:
                     result = new TransportWideCCExtension(id);

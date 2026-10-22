@@ -557,6 +557,13 @@ namespace SIPSorcery.Net
                             }
                             break;
 
+                        case PlayoutDelayExtension.RTP_HEADER_EXTENSION_URI:
+                            if (ext is PlayoutDelayExtension playoutDelayExtension)
+                            {
+                                playoutDelayExtension.Set(value);
+                            }
+                            break;
+
                         case TransportWideCCExtension.RTP_HEADER_EXTENSION_URI:
                             //case TransportWideCCExtension.RTP_HEADER_EXTENSION_URI_ALT:
                             if (ext is TransportWideCCExtension transportWideCCExtension)

@@ -1474,7 +1474,7 @@ namespace SIPSorcery.Net
                 {
                     try
                     {
-                        _iceCompletedGatheringTask.Task.Wait();
+                        _iceCompletedGatheringTask.Task.Wait(ct.Token);
                     }
                     catch (OperationCanceledException)
                     {
